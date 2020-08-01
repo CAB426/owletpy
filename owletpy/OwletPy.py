@@ -25,8 +25,6 @@ class OwletPy(object):
                                     'url_signin': 'https://user-field-1a2039d9.aylanetworks.com/api/v1/token_sign_in',
                                     'url_base': 'https://ads-field-1a2039d9.aylanetworks.com/apiv1',
                                     'apiKey': 'AIzaSyCsDZ8kWxQuLJAMVnmEhEkayH1TSxKXfGA',
-                                    'databaseURL': 'https://owletcare-prod.firebaseio.com',
-                                    'storage_bucket': 'owletcare-prod.appspot.com',
                                     'app_id': 'sso-prod-3g-id',
                                     'app_secret': 'sso-prod-UEjtnPCtFfjdwIwxqnC0OipxRFU',
                                 },
@@ -35,8 +33,6 @@ class OwletPy(object):
                                     'url_signin': 'https://user-field-eu-1a2039d9.aylanetworks.com/api/v1/token_sign_in',
                                     'url_base': 'https://ads-field-eu-1a2039d9.aylanetworks.com/apiv1',
                                     'apiKey': 'AIzaSyDm6EhV70wudwN3iOSq3vTjtsdGjdFLuuM',
-                                    'databaseURL': 'https://owletcare-prod-eu.firebaseio.com',
-                                    'storage_bucket': 'owletcare-prod-eu.appspot.com',
                                     'app_id': 'OwletCare-Android-EU-fw-id',
                                     'app_secret': 'OwletCare-Android-EU-JKupMPBoj_Npce_9a95Pc8Qo0Mw',
                                 }
@@ -155,14 +151,16 @@ class OwletPy(object):
         if self.auth_token is not None and (self.expire_time > time.time()):
             return
                 
-        request_ref = "https://www.googleapis.com/identitytoolkit/v3/relyingparty/verifyPassword?key={0}".format(self.region_config[self.owlet_region]['apiKey'])
-        headers = {"content-type": "application/json; charset=UTF-8"}
-        data = json.dumps({"email": email, "password": password, "returnSecureToken": True})
-        request_object = requests.post(request_ref, headers=headers, data=data)
-        self.current_user = request_object.json()
-        user = request_object.json()
-        jwt = user['idToken']
-        
+        api_key = self.region_config[self.owlet_region]['apiKey']
+        r = requests.post(f'https://www.googleapis.com/identitytoolkit/v3/relyingparty/verifyPassword?key={api_key}',
+            data=json.dumps({'email': owlet_user, 'password': owlet_pass, 'returnSecureToken': True}),
+            headers={
+                'X-Android-Package': 'com.owletcare.owletcare',
+                'X-Android-Cert': '2A3BC26DB0B8B0792DBE28E6FFDC2598F9B12B74'
+        })
+        r.raise_for_status()
+        jwt = r.json()['idToken']
+               
         # authenticate against owletdata.com, get the mini_token
         r = requests.get(self.region_config[self.owlet_region]
                          ['url_mini'], headers={'Authorization': jwt})
