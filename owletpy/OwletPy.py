@@ -5,11 +5,11 @@ import requests
 
 class OwletPy(object):
 
-    def __init__(self, username, password, prop_ttl=15):
+    def __init__(self, username, password, region='world'):
         self.auth_token = None
         self.expire_time = 0
         self.prop_expire_time = 0
-        self.prop_ttl = prop_ttl
+        self.prop_ttl = 15
         self.app_active_expire = 0
         self.app_active_ttl = 5
         self.username = username
@@ -18,7 +18,7 @@ class OwletPy(object):
         self.auth_header = None
         self.monitored_properties = []
         self.app_active_prop_id = None
-        self.owlet_region = 'world'
+        self.owlet_region = region
         self.region_config = {
                                 'world': {
                                     'url_mini': 'https://ayla-sso.owletdata.com/mini/',
@@ -62,7 +62,7 @@ class OwletPy(object):
         return self.auth_header
 
     def get_dsn(self):
-        dsnurl = 'https://ads-field-1a2039d9.aylanetworks.com/apiv1/devices.json'
+        dsnurl = self.region_config[self.owlet_region]['url_base'] + '/devices.json'
         response = requests.get(dsnurl, headers=self.get_auth_header())
         # data = auth_header(url)
         json_data = response.json()
@@ -75,8 +75,7 @@ class OwletPy(object):
         if set_active is True:
             self.set_app_active()
 
-        properties_url = 'https://ads-field-1a2039d9.aylanetworks.com/apiv1/dsns/{}/properties'.format(
-            self.dsn)
+        properties_url = self.region_config[self.owlet_region]['url_base'] + '/dsns/' + self.dsn + '/properties'
 
         if measure is not None:
             properties_url = properties_url + '/' + measure
@@ -97,8 +96,7 @@ class OwletPy(object):
                 prop = self.get_properties('APP_ACTIVE', False)
                 self.app_active_prop_id = prop['key']
 
-            data_point_url = 'https://ads-field-1a2039d9.aylanetworks.com/apiv1/properties/{}/datapoints.json'.format(
-                self.app_active_prop_id)
+            data_point_url = self.region_config[self.owlet_region]['url_base'] + '/properties/' + str(self.app_active_prop_id) + '/datapoints.json'
 
             payload = {'datapoint': {'value': 1}}
             resp = requests.post(
@@ -160,13 +158,12 @@ class OwletPy(object):
         })
         r.raise_for_status()
         jwt = r.json()['idToken']
-               
+        
         # authenticate against owletdata.com, get the mini_token
-        r = requests.get(self.region_config[self.owlet_region]
-                         ['url_mini'], headers={'Authorization': jwt})
+        r = requests.get(self.region_config[self.owlet_region]['url_mini'], headers={'Authorization': jwt})
         r.raise_for_status()
         mini_token = r.json()['mini_token']
-        
+              
         # authenticate against Ayla, get the access_token
         r = requests.post(self.region_config[self.owlet_region]['url_signin'], json={
                     "app_id": self.region_config[self.owlet_region]['app_id'],
